@@ -1,0 +1,27 @@
+{
+  "name": "digicomps",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hiskandaryps/digicomps.git"
+  },
+  "author": "digicomps",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hiskandaryps/digicomps/issues"
+  },
+  "homepage": "https://github.com/hiskandaryps/digicomps#readme",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.43.1",
+    "body-parser": "^1.20.2",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "nodemon": "^3.1.0"
+  }
+}
