@@ -1,10 +1,11 @@
+//routes.js
 const express = require("express");
 const router = express.Router();
-const { getUser, checkUser, postUser } = require("./handler");
+const { register, logIn, getUser } = require("./handler");
 
 // Define routes
-router.get("/user", getUser);
-router.get("/login/user/", checkUser);
-router.post("/user", postUser); 
+router.post("/register", register);
+router.post("/login", logIn);
+router.get("/user", getUser); 
 
 module.exports = router;

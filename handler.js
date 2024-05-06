@@ -1,90 +1,106 @@
-// handler.js
+const bcrypt = require('bcryptjs');
 const supabase = require("./connection");
 
 function response(status, data, message, res) {
     res.status(status).json({ status, data, message });
 }
 
-async function getUser(req, res) {
-    try {
-        let { data: students, error } = await supabase
-            .from('users')
-            .select('*')
-            .order('id', { ascending: true });
-        
-        if (error) {
-            response(500, null, "Internal Server Error", res);
-        } else {
-            if (students.length === 0) {
-                response(404, null, "No data found", res);
-            } else {
-                response(200, students, "Data fetched successfully", res);
-            }
-        }
-    } catch (error) {
-        response(500, null, "Internal Server Error", res);
-    }
-}
-
-async function checkUser(req, res) {
-    const { email, password } = req.body;
+// Function to register a new user
+async function register(req, res) {
+    const { Username, Email, Password } = req.body;
 
     try {
-        let { data: users, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('email', email)
-            .single();
-        
-            if (!users) {
-                response(404, null, "User not found", res);
-            } else {
-                const isValidCredentials = users.password === password;
-                if (!isValidCredentials) {
-                    response(401, null, "Invalid credentials", res);
-                } else {
-                    response(200, "Confidentials", "Login Success", res);
-                }
-            }
-        
-    } catch (error) {
-        console.error('Error executing query', error);
-        response(500, null, "Internal Server Error", res);
-    }
-}
+        // Hash the password
+        const hashedPassword = await bcrypt.hash(Password, 10);
 
-async function postUser(req, res) {
-    const { username, email, password } = req.body;
-
-    try {
-        let { error } = await supabase
-            .from('users')
-            .insert([
-                { username, email, password }
-            ]);
+        const { data, error } = await supabase
+        .from('users')
+        .insert([
+            { Username, Email, Password: hashedPassword }
+        ]);
 
         if (error) {
-            console.error('Error executing query', error);
-            response(500, null, "Internal Server Error", res);
+            return res.status(500).json({ error: error.message });
         } else {
             // Fetch the inserted data
-            let { data: insertedData, error: fetchError } = await supabase
+            let { data: registeredData, error: fetchError } = await supabase
                 .from('users')
                 .select('*')
-                .eq('email', email) // Assuming student_id is unique
+                .eq('Email', Email) // Assuming student_id is unique
 
             if (fetchError) {
                 console.error('Error fetching inserted data', fetchError);
-                response(500, null, "Internal Server Error", res);
+                return res.status(500).json({ error: "Internal Server Error" });
             } else {
                 // If data was inserted successfully, return it in the response
-                response(201, insertedData[0], "Student data inserted successfully", res);
+                const responseData = {
+                    Username: data[0].Username,
+                    Email: data[0].Email,
+                    inserted_at: data[0].inserted_at,
+                    updated_at: data[0].updated_at
+                };
+                
+                res.status(200).json({ message: "Login successful", user: responseData });
             }
         }
     } catch (error) {
-        console.error('Error executing query', error);
-        response(500, null, "Internal Server Error", res);
+        res.status(500).json({ error: error.message });
     }
 }
 
-module.exports = { getUser, checkUser, postUser };
+// Function to log in an existing user
+async function logIn(req, res) {
+    const { Email, Password } = req.body;
+
+    try {
+        const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('Email', Email);
+
+        if (error) {
+            return res.status(500).json({ error: error.message });
+        }
+
+        if (data.length === 0) {
+            return res.status(401).json({ error: "Invalid email or password" });
+        }
+
+        // Compare the hashed password
+        const match = await bcrypt.compare(Password, data[0].Password);
+        if (!match) {
+            return res.status(401).json({ error: "Invalid email or password" });
+        }
+
+        const responseData = {
+            Username: data[0].Username,
+            Email: data[0].Email,
+            inserted_at: data[0].inserted_at,
+            updated_at: data[0].updated_at
+        };
+        
+        res.status(200).json({ message: "Login successful", user: responseData });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+// Function to get user details
+async function getUser(req, res) {
+    try {
+        const { data, error } = await supabase
+        .from('users')
+        .select('*');
+
+        if (error) {
+            return res.status(500).json({ error: error.message });
+        }
+
+        res.status(200).json({ users: data });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+// Exporting the handler functions
+module.exports = { register, logIn, getUser };
