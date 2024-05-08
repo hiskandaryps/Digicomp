@@ -9,50 +9,59 @@ function response(status, data, message, res) {
 async function register(req, res) {
     const { Username, Email, Password } = req.body;
 
+    // Regular expression for validating email address
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    // Check if the provided email address is valid
+    if (!emailRegex.test(Email)) {
+        return response(400, null, "Invalid email address", res);
+    }
+
     try {
         // Hash the password
         const hashedPassword = await bcrypt.hash(Password, 10);
 
         const { data, error } = await supabase
-        .from('users')
-        .insert([
-            { Username, Email, Password: hashedPassword }
-        ]);
+            .from('users')
+            .insert([
+                { Username, Email, Password: hashedPassword }
+            ]);
 
         if (error) {
-            return res.status(500).json({ error: error.message });
+            return response(500, null, error.message, res);
         } else {
             // Fetch the inserted data
             const { data: registeredData, error: fetchError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('Email', Email);
+                .from('users')
+                .select('*')
+                .eq('Email', Email);
 
-        if (fetchError) {
-            console.error('Error fetching inserted data', fetchError);
-            return res.status(500).json({ error: "Internal Server Error" });
-        }
+            if (fetchError) {
+                console.error('Error fetching inserted data', fetchError);
+                return response(500, null, "Internal server error", res);
+            }
 
-        if (!registeredData || registeredData.length === 0) {
-            console.error('No data found after registration');
-            return res.status(500).json({ error: "No data found after registration" });
-        }
+            if (!registeredData || registeredData.length === 0) {
+                console.error('No data found after registration');
+                return response(500, null, "Internal server error", res);
+            }
 
-        // If data was inserted successfully, return it in the response
-        const responseData = {
-            Username: registeredData[0].Username,
-            Email: registeredData[0].Email,
-            inserted_at: registeredData[0].inserted_at,
-            updated_at: registeredData[0].updated_at
-        };
+            // If data was inserted successfully, return it in the response
+            const responseData = {
+                Username: registeredData[0].Username,
+                Email: registeredData[0].Email,
+                inserted_at: registeredData[0].inserted_at,
+                updated_at: registeredData[0].updated_at
+            };
 
-        res.status(200).json({ message: "Login successful", user: responseData });
+            return response(200, responseData, "Registration complete", res);
         }   
     } catch (error) {
         console.error('Error in registration process', error);
-        res.status(500).json({ error: error.message });
+        return response(500, null, error.message, res);
     }
 }
+
 
 // Function to log in an existing user
 async function logIn(req, res) {
@@ -60,22 +69,22 @@ async function logIn(req, res) {
 
     try {
         const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('Email', Email);
+            .from('users')
+            .select('*')
+            .eq('Email', Email);
 
         if (error) {
-            return res.status(500).json({ error: error.message });
+            return response(500, null, error.message, res);
         }
 
         if (data.length === 0) {
-            return res.status(401).json({ error: "Invalid email" });
+            return response(401, null, "Invalid email address", res);
         }
 
         // Compare the hashed password
         const match = await bcrypt.compare(Password, data[0].Password);
         if (!match) {
-            return res.status(401).json({ error: "Invalid password" });
+            return response(401, null, "Invalid password", res);
         }
 
         const responseData = {
@@ -85,9 +94,9 @@ async function logIn(req, res) {
             updated_at: data[0].updated_at
         };
         
-        res.status(200).json({ message: "Login successful", user: responseData });
+        return response(200, responseData, "Login successful", res);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return response(500, null, error.message, res);
     }
 }
 
@@ -99,12 +108,12 @@ async function getUser(req, res) {
         .select('*');
 
         if (error) {
-            return res.status(500).json({ error: error.message });
+            return response(500, null, error.message, res);
         }
 
-        res.status(200).json({ users: data });
+        return response(200, data, "Data retreived", res);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        return response(500, null, error.message, res);
     }
 }
 
