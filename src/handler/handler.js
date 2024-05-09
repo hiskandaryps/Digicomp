@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const supabase = require("../config/connection");
+const { generateAccessToken } = require("../middleware/jsonwebtoken");
 
 //non routes function
 function response(status, data, message, res) {
@@ -83,12 +84,10 @@ async function register(req, res) {
                 .eq('Email', Email);
 
             if (fetchError) {
-                console.error('Error fetching inserted data', fetchError);
                 return response(500, null, "Internal server error", res);
             }
 
             if (!registeredData || registeredData.length === 0) {
-                console.error('No data found after registration');
                 return response(500, null, "Internal server error", res);
             }
 
@@ -103,7 +102,6 @@ async function register(req, res) {
             return response(200, responseData, "Registration complete", res);
         }   
     } catch (error) {
-        console.error('Error in registration process', error);
         return response(500, null, error.message, res);
     }
 }
@@ -132,11 +130,14 @@ async function logIn(req, res) {
             return response(401, null, "Invalid password", res);
         }
 
+        const token = generateAccessToken(data[0].Username);
+
         const responseData = {
             Username: data[0].Username,
             Email: data[0].Email,
             inserted_at: data[0].inserted_at,
-            updated_at: data[0].updated_at
+            updated_at: data[0].updated_at,
+            Token: token
         };
         
         return response(200, responseData, "Login successful", res);
