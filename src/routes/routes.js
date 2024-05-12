@@ -8,8 +8,8 @@ const { authenticateToken } = require("../middleware/jsonwebtoken");
 // Define routes
 router.post("/register", register);
 router.post("/login", logIn);
-router.get("/user", authenticateToken, getUser); 
-router.get("/realtime", authenticateToken, getRealtime); 
-router.get("/records", authenticateToken, getRecords); 
+router.get("/user", getUser); 
+router.get("/realtime", getRealtime); 
+router.get("/records", getRecords); 
 
 module.exports = router;
