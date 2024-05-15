@@ -1,3 +1,4 @@
+//handler.js
 const bcrypt = require('bcryptjs');
 const supabase = require("../config/connection");
 const { generateAccessToken } = require("../middleware/jsonwebtoken");
@@ -220,5 +221,73 @@ async function getRecords(req, res) {
     }
 }
 
+async function getControl(req, res) {
+    try {
+        const { data, error } = await supabase
+            .from('control')
+            .select('*')
+
+        if (error) {
+            return response(500, null, error.message, res);
+        }
+
+        return response(200, data, "Control settings retrieved", res);
+    } catch (error) {
+        return response(500, null, error.message, res);
+    }
+}
+
+async function putControl(req, res) {
+    try {
+        const { 
+            min_mesophilic, 
+            max_mesophilic, 
+            min_thermophilic, 
+            max_thermophilic, 
+            min_humidity, 
+            max_humidity, 
+            min_neutral, 
+            max_neutral 
+        } = req.body;
+
+        const { data, error } = await supabase
+            .from('control')
+            .update({
+                min_mesophilic,
+                max_mesophilic,
+                min_thermophilic,
+                max_thermophilic,
+                min_humidity,
+                max_humidity,
+                min_neutral,
+                max_neutral,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', 1); // Assuming there's only one row in the control table
+
+        if (error) {
+            return response(500, null, error.message, res);
+        } else {
+            // Fetch the inserted data
+            const { data: updatedSettings, error: fetchError } = await supabase
+                .from('control')
+                .select('*')
+
+            if (fetchError) {
+                return response(500, null, "Internal server error", res);
+            }
+
+            if (!updatedSettings || updatedSettings.length === 0) {
+                return response(500, null, "Internal server error", res);
+            }
+
+            return response(200, updatedSettings, "Registration complete", res);
+        }  
+    } catch (error) {
+        return response(500, null, error.message, res);
+    }
+}
+
+
 // Exporting the handler functions
-module.exports = { register, logIn, getUser, getRealtime, getRecords };
+module.exports = { register, logIn, getUser, getRealtime, getRecords, getControl, putControl };
