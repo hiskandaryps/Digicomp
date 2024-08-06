@@ -8,6 +8,44 @@ function response(status, data, message, res) {
     res.status(status).json({ status, data, message });
 }
 
+function getDate() {
+    var dt = new Date();
+    var offset = 7 * 60 * 60 * 1000;
+    var newDate = new Date(dt.getTime() + offset);
+    
+    // Format date to ISO string without timezone offset
+    return isoString = newDate.toISOString();
+}
+
+function calculateTemp(sedang1, sedang4) {
+    let dingin1 = 0;
+    let dingin2, dingin3, dingin4, sedang2, sedang3, panas1, panas2, panas3, panas4 = 90;
+
+    sedang2 = sedang1 + (sedang4 - sedang1) / 3;
+    sedang3 = sedang1 + 2 * ((sedang4 - sedang1) / 3);
+    dingin4 = sedang1 + 5;
+    dingin2 = dingin1 + (dingin4 - dingin1) / 3;
+    dingin3 = dingin1 + 2 * ((dingin4 - dingin1) / 3);
+    panas1 = sedang4 - 5;
+    panas2 = panas1 + (panas4 - panas1) / 3;
+    panas3 = panas1 + 2 * ((panas4 - panas1) / 3);
+
+    return {
+        dingin1,
+        dingin2,
+        dingin3,
+        dingin4,
+        sedang1,
+        sedang2,
+        sedang3,
+        sedang4,
+        panas1,
+        panas2,
+        panas3,
+        panas4
+    };
+}
+
 // Function to calculate average values
 function calculateAverage(data) {
     const total = data.length;
@@ -69,6 +107,11 @@ async function register(req, res) {
         // Hash the password
         const hashedPassword = await bcrypt.hash(Password, 10);
 
+        await supabase.auth.signUp({
+            email: Email,
+            password: hashedPassword
+          })
+
         const { data, error } = await supabase
             .from('users')
             .insert([
@@ -112,6 +155,11 @@ async function logIn(req, res) {
     const { Email, Password } = req.body;
 
     try {
+        await supabase.auth.signInWithPassword({
+            email: Email,
+            password: Password
+          })
+
         const { data, error } = await supabase
             .from('users')
             .select('*')
@@ -201,8 +249,12 @@ async function getRecords(req, res) {
             // Insert average values into records table
             await insertRecords(averageValues);
 
-            await resetRealtimeTable();
+            //await resetRealtimeTable();
 
+            let { data, error } = await supabase
+                .rpc('reset_realtime')
+            if (error) console.error(error)
+            else console.log(data)
         }
 
         // Fetch content of records table
@@ -237,31 +289,24 @@ async function getControl(req, res) {
     }
 }
 
-async function putControl(req, res) {
+async function putControlTemp(req, res) {
+
     try {
         const { 
-            min_mesophilic, 
-            max_mesophilic, 
-            min_thermophilic, 
-            max_thermophilic, 
-            min_humidity, 
-            max_humidity, 
-            min_neutral, 
-            max_neutral 
+            mesophilic_temp, 
+            thermophilic_temp
         } = req.body;
+
+        const values = calculateTemp(mesophilic_temp, thermophilic_temp)
+        
+        sedang1 = mesophilic_temp;
+        sedang4 = thermophilic_temp;
 
         const { data, error } = await supabase
             .from('control')
             .update({
-                min_mesophilic,
-                max_mesophilic,
-                min_thermophilic,
-                max_thermophilic,
-                min_humidity,
-                max_humidity,
-                min_neutral,
-                max_neutral,
-                updated_at: new Date().toISOString()
+                ...values,
+                updated_at: getDate()
             })
             .eq('id', 1); // Assuming there's only one row in the control table
 
@@ -281,13 +326,104 @@ async function putControl(req, res) {
                 return response(500, null, "Internal server error", res);
             }
 
-            return response(200, updatedSettings, "Registration complete", res);
+            return response(200, updatedSettings, "Setting updated", res);
         }  
     } catch (error) {
         return response(500, null, error.message, res);
     }
 }
 
+async function putControlMoist(req, res) {
+    try {
+        const { 
+            moist_min, 
+            moist_max
+        } = req.body;
+
+        const { data, error } = await supabase
+            .from('control')
+            .update({
+                moist_min,
+                moist_max,
+                updated_at: getDate()
+            })
+            .eq('id', 1); // Assuming there's only one row in the control table
+
+        if (error) {
+            return response(500, null, error.message, res);
+        } else {
+            // Fetch the inserted data
+            const { data: updatedSettings, error: fetchError } = await supabase
+                .from('control')
+                .select('*')
+
+            if (fetchError) {
+                return response(500, null, "Internal server error", res);
+            }
+
+            if (!updatedSettings || updatedSettings.length === 0) {
+                return response(500, null, "Internal server error", res);
+            }
+
+            return response(200, updatedSettings, "Setting updated", res);
+        }  
+    } catch (error) {
+        return response(500, null, error.message, res);
+    }
+}
+
+async function activateDevice(req, res) {
+    try {
+        let state = 1;
+        
+
+        const { data, error } = await supabase
+            .from('state')
+            .update({
+                state,
+                date: getDate()
+            })
+            .eq('id', 1); // Assuming there's only one row in the state table
+
+        if (error) {
+            return response(500, null, error.message, res);
+        } else {
+            // Fetch the updated data
+            const { data: updatedSettings, error: fetchError } = await supabase
+                .from('state')
+                .select('*')
+                .eq('id', 1);
+
+            if (fetchError) {
+                return response(500, null, "Internal server error", res);
+            }
+
+            if (!updatedSettings || updatedSettings.length === 0) {
+                return response(500, null, "Internal server error", res);
+            }
+
+            return response(200, updatedSettings, "State updated", res);
+        }
+    } catch (error) {
+        return response(500, null, error.message, res);
+    }
+}
+
+async function getState(req, res) {
+    try {
+        const { data, error } = await supabase
+            .from('state')
+            .select('*')
+
+        if (error) {
+            return response(500, null, error.message, res);
+        }
+
+        return response(200, data, "State retrieved", res);
+    } catch (error) {
+        return response(500, null, error.message, res);
+    }
+}
 
 // Exporting the handler functions
-module.exports = { register, logIn, getUser, getRealtime, getRecords, getControl, putControl };
+module.exports = { register, logIn, getUser, getRealtime, getRecords, getControl, putControlTemp, putControlMoist, activateDevice, getState };

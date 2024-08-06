@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Math Variables</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    input {
+      margin: 10px 0;
+      padding: 5px;
+    }
+    button {
+      padding: 5px 10px;
+    }
+    .result {
+      margin-top: 20px;
+    }
+    .result p {
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Enter Values for x and y</h1>
+  <form id="inputForm">
+    <label for="x">x: </label>
+    <input type="number" id="x" name="x" required><br>
+    <label for="y">y: </label>
+    <input type="number" id="y" name="y" required><br>
+    <button type="submit">Submit</button>
+  </form>
+
+  <div class="result" id="result"></div>
+
+  <script>
+    document.getElementById('inputForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+      
+      // Initialize variables
+      let a = 0;
+      let b, c, d, x, e, f, y, g, h, i;
+      let j = 90;
+      
+      // Get values for x and y from the input fields
+      x = parseFloat(document.getElementById('x').value);
+      y = parseFloat(document.getElementById('y').value);
+      
+      // Calculate the variables based on the given formulas
+      e = x + (y - x) / 3;
+      f = x + 2 * ((y - x) / 3);
+      d = x + 5;
+      b = a + (d - a) / 3;
+      c = a + 2 * ((d - a) / 3);
+      g = y - 5;
+      h = g + (j - g) / 3;
+      i = g + 2 * ((j - g) / 3);
+      
+      // Display the results
+      let resultDiv = document.getElementById('result');
+      resultDiv.innerHTML = `
+        <p>a = ${a}</p>
+        <p>b = ${b}</p>
+        <p>c = ${c}</p>
+        <p>d = ${d}</p>
+        <p>x = ${x}</p>
+        <p>e = ${e}</p>
+        <p>f = ${f}</p>
+        <p>y = ${y}</p>
+        <p>g = ${g}</p>
+        <p>h = ${h}</p>
+        <p>i = ${i}</p>
+        <p>j = ${j}</p>
+      `;
+    });
+  </script>
+</body>
+</html>
