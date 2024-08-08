@@ -429,8 +429,28 @@ async function putControlMoist(req, res) {
 
 async function activateDevice(req, res) {
     try {
-        let state = 1;
-        
+        const { data: stateData, error: stateError } = await supabase
+            .from('state')
+            .select('*');
+
+        if (stateError) {
+            return response(500, null, stateError.message, res);
+        }
+
+        console.log("State Data:", stateData); // Debugging: Log the returned data
+
+        // Check if stateData is empty or undefined
+        if (!stateData || stateData.length === 0) {
+            return response(404, null, "State data not found", res);
+        }
+
+        const currentState = stateData[0].state;
+
+        if (currentState !== 0) {
+            return response(400, null, "Device is already activated", res);
+        }
+
+        const state = 1;
 
         const { data, error } = await supabase
             .from('state')
@@ -438,27 +458,56 @@ async function activateDevice(req, res) {
                 state,
                 date: getDate()
             })
-            .eq('id', 1); // Assuming there's only one row in the state table
+            .eq('id', 1);
 
         if (error) {
             return response(500, null, error.message, res);
-        } else {
-            // Fetch the updated data
-            const { data: updatedSettings, error: fetchError } = await supabase
-                .from('state')
-                .select('*')
-                .eq('id', 1);
-
-            if (fetchError) {
-                return response(500, null, "Internal server error", res);
-            }
-
-            if (!updatedSettings || updatedSettings.length === 0) {
-                return response(500, null, "Internal server error", res);
-            }
-
-            return response(200, updatedSettings, "State updated", res);
         }
+
+        return response(200, data, "State updated", res);
+    } catch (error) {
+        return response(500, null, error.message, res);
+    }
+}
+
+async function deactivateDevice(req, res) {
+    try {
+        const { data: stateData, error: stateError } = await supabase
+            .from('state')
+            .select('*');
+
+        if (stateError) {
+            return response(500, null, stateError.message, res);
+        }
+
+        console.log("State Data:", stateData); // Debugging: Log the returned data
+
+        // Check if stateData is empty or undefined
+        if (!stateData || stateData.length === 0) {
+            return response(404, null, "State data not found", res);
+        }
+
+        const currentState = stateData[0].state;
+
+        if (currentState !== 1) {
+            return response(400, null, "Device is already deactivated", res);
+        }
+
+        const state = 0;
+
+        const { data, error } = await supabase
+            .from('state')
+            .update({
+                state,
+                date: getDate()
+            })
+            .eq('id', 1);
+
+        if (error) {
+            return response(500, null, error.message, res);
+        }
+
+        return response(200, data, "State updated", res);
     } catch (error) {
         return response(500, null, error.message, res);
     }
@@ -481,4 +530,4 @@ async function getState(req, res) {
 }
 
 // Exporting the handler functions
-module.exports = { register, logIn, getUser, getRealtime, postRealtime, getRecords, getControl, putControlTemp, putControlMoist, activateDevice, getState };
+module.exports = { register, logIn, getUser, getRealtime, postRealtime, getRecords, getControl, putControlTemp, putControlMoist, deactivateDevice, activateDevice, getState };

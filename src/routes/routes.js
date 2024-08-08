@@ -1,7 +1,7 @@
 //routes.js
 const express = require("express");
 const router = express.Router();
-const { register, logIn, getUser, getRealtime, postRealtime, getRecords, getControl, putControlTemp, putControlMoist, activateDevice, getState } = require("../handler/handler");
+const { register, logIn, getUser, getRealtime, postRealtime, getRecords, getControl, putControlTemp, putControlMoist, deactivateDevice, activateDevice, getState } = require("../handler/handler");
 const { authenticateToken } = require("../middleware/jsonwebtoken");
 
 
@@ -15,7 +15,8 @@ router.get("/records", getRecords);
 router.get("/control", getControl); 
 router.put("/control/temperatur", authenticateToken, putControlTemp); 
 router.put("/control/kelembapan", authenticateToken, putControlMoist); 
-router.put("/state", authenticateToken, activateDevice);
+router.put("/activate", authenticateToken, activateDevice);
+router.put("/deactivate", authenticateToken, deactivateDevice);
 router.get("/state", authenticateToken, getState);
 
 module.exports = router;
