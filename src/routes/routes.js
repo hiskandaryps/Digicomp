@@ -15,8 +15,8 @@ router.get("/records", getRecords);
 router.get("/control", getControl); 
 router.put("/control/temperatur", authenticateToken, putControlTemp); 
 router.put("/control/kelembapan", authenticateToken, putControlMoist); 
-router.put("/activate", authenticateToken, activateDevice);
-router.put("/deactivate", authenticateToken, deactivateDevice);
+router.put("/state/activate", authenticateToken, activateDevice);
+router.put("/state/deactivate", authenticateToken, deactivateDevice);
 router.get("/state", authenticateToken, getState);
 
 module.exports = router;
