@@ -68,20 +68,6 @@ function calculateAverage(data) {
     };
 }
 
-async function insertRecords(data) {
-    await supabase
-        .from('records')
-        .insert([
-            {
-                temp: data.temp,
-                humi: data.humi,
-                ph: data.ph,
-                temp_ambiance: data.temp_ambiance,
-                humi_ambiance: data.humi_ambiance
-            }
-        ]);
-}
-
 async function resetRealtimeTable() {
     // Delete all data from the realtime table
     await supabase
@@ -230,7 +216,55 @@ async function getRealtime(req, res) {
     }
 }
 
+async function postRealtime(req, res) {
+    let id;
+    let increment;
+    
+    const { 
+        temp,
+        humi,
+        ph,
+        temp_ambiance,
+        humi_ambiance } = req.body;
+
+    try {
+        const { data: realtimeData, error: realtimeError } = await supabase
+            .from('realtime')
+            .select('*');
+
+        if (realtimeError) {
+            return response(500, null, realtimeError.message, res);
+        }
+
+        // Check if there are more than 5 records
+        increment = realtimeData.length + 1;
+        id = increment;
+
+        const { data, error } = await supabase
+            .from('realtime')
+            .insert([
+            {
+                id,
+                temp,
+                humi,
+                ph,
+                temp_ambiance,
+                humi_ambiance
+            }
+            ]);
+        if (error) {
+            return response(500, null, error.message, res);
+        }
+
+        return response(200, data, "Latest data retrieved", res);
+    } catch (error) {
+        return response(500, null, error.message, res);
+    }
+}
+
 async function getRecords(req, res) {
+    let id;
+    let increment;
     try {
         // Fetch data from realtime table
         const { data: realtimeData, error: realtimeError } = await supabase
@@ -246,15 +280,36 @@ async function getRecords(req, res) {
             // Calculate average values
             const averageValues = calculateAverage(realtimeData);
 
-            // Insert average values into records table
-            await insertRecords(averageValues);
+            const { data: Data, error: Error } = await supabase
+            .from('records')
+            .select('*');
+
+            if (Error) {
+                return response(500, null, Error.message, res);
+            }
+
+            // Check if there are more than 5 records
+            increment = Data.length + 1;
+            id = increment;
+
+            const { data, error } = await supabase
+            .from('records')
+            .insert([
+                {
+                    id,
+                    temp: averageValues.temp,
+                    humi: averageValues.humi,
+                    ph: averageValues.ph,
+                    temp_ambiance: averageValues.temp_ambiance,
+                    humi_ambiance: averageValues.humi_ambiance
+                }
+            ]);
+
+            if (error) {
+                return response(500, null, error.message, res);
+            }
 
             await resetRealtimeTable();
-
-            // let { data, error } = await supabase
-            //     .rpc('reset_realtime')
-            // if (error) console.error(error)
-            // else console.log(data)
         }
 
         // Fetch content of records table
@@ -426,4 +481,4 @@ async function getState(req, res) {
 }
 
 // Exporting the handler functions
-module.exports = { register, logIn, getUser, getRealtime, getRecords, getControl, putControlTemp, putControlMoist, activateDevice, getState };
+module.exports = { register, logIn, getUser, getRealtime, postRealtime, getRecords, getControl, putControlTemp, putControlMoist, activateDevice, getState };

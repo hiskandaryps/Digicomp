@@ -1,7 +1,7 @@
 //routes.js
 const express = require("express");
 const router = express.Router();
-const { register, logIn, getUser, getRealtime, getRecords, getControl, putControlTemp, putControlMoist, activateDevice, getState } = require("../handler/handler");
+const { register, logIn, getUser, getRealtime, postRealtime, getRecords, getControl, putControlTemp, putControlMoist, activateDevice, getState } = require("../handler/handler");
 const { authenticateToken } = require("../middleware/jsonwebtoken");
 
 
@@ -10,6 +10,7 @@ router.post("/user", register);
 router.post("/user/login", logIn);
 router.get("/user", authenticateToken, getUser); 
 router.get("/realtime", getRealtime); 
+router.post("/realtime", postRealtime);
 router.get("/records", getRecords); 
 router.get("/control", getControl); 
 router.put("/control/temperatur", authenticateToken, putControlTemp); 
