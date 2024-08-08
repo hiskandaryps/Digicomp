@@ -249,12 +249,12 @@ async function getRecords(req, res) {
             // Insert average values into records table
             await insertRecords(averageValues);
 
-            //await resetRealtimeTable();
+            await resetRealtimeTable();
 
-            let { data, error } = await supabase
-                .rpc('reset_realtime')
-            if (error) console.error(error)
-            else console.log(data)
+            // let { data, error } = await supabase
+            //     .rpc('reset_realtime')
+            // if (error) console.error(error)
+            // else console.log(data)
         }
 
         // Fetch content of records table
