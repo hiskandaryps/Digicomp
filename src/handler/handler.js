@@ -280,8 +280,6 @@ async function postRealtime(req, res) {
 async function postRecords(req, res) {
     let id;
     let increment;
-    // let mesoTemp;
-    // let thermoTemp;
 
     try {
         // Fetch data from realtime table
@@ -290,7 +288,7 @@ async function postRecords(req, res) {
             .select('*');
 
         if (realtimeError) {
-            return response(500, null, realtimeError.message, res);
+            return response(500, null, realtimeError.message || "Realtime error", res);
         }
 
         // Check if there are more than 5 records
@@ -302,24 +300,12 @@ async function postRecords(req, res) {
             .from('records')
             .select('*');
 
-            if (Error) {
-                return response(500, null, idError.message, res);
+            if (idError) {
+                return response(500, null, idError.message || "ID error", res);
             }
 
-            // const { data: tempData, tempError } = await supabase
-            // .from('control')
-            // .select('*')
-
-            // if (error) {
-            //     return response(500, null, tempError.message, res);
-            // }
-
-            // Check if there are more than 5 records
             increment = idData.length + 1;
             id = increment;
-
-            // mesoTemp = tempData.sedang1[0];
-            // thermoTemp = tempData.sedang4[0];
 
             const { data, error } = await supabase
             .from('records')
@@ -335,7 +321,7 @@ async function postRecords(req, res) {
             ]);
 
             if (error) {
-                return response(500, null, error.message, res);
+                return response(500, null, error.message || "Insert error", res);
             }
 
             await resetRealtimeTable();
@@ -344,7 +330,7 @@ async function postRecords(req, res) {
         // Return content of records table
         return response(200, null, "Data retrieved", res);
     } catch (error) {
-        return response(500, null, error.message, res);
+        return response(500, null, error.message || "Unknown error", res);
     }
 }
 
