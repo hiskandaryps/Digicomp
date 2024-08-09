@@ -67,6 +67,18 @@ function calculateAverage(data) {
     };
 }
 
+// function determinePhase(mesotemp, thermotemp, temp, waktu) {
+//     if (temp < thermotemp & waktu <= 4){
+//         return "Mesofilik 1";
+//     } else if (temp > thermotemp & 3 < waktu <= 14){
+//         return "Thermofilik";
+//     } else if (temp < thermotemp & 12 < waktu <= 20){
+//         return "Mesofilik 2";
+//     } else if (temp < mesotemp & 12 < waktu <= 20 or temp < thermotemp & 17 < waktu <= 40 ){
+//         return "Maturasi";
+//     }
+// }
+
 async function resetRealtimeTable() {
     // Delete all data from the realtime table
     await supabase
@@ -265,9 +277,12 @@ async function postRealtime(req, res) {
     }
 }
 
-async function getRecords(req, res) {
+async function postRecords(req, res) {
     let id;
     let increment;
+    // let mesoTemp;
+    // let thermoTemp;
+
     try {
         // Fetch data from realtime table
         const { data: realtimeData, error: realtimeError } = await supabase
@@ -283,17 +298,28 @@ async function getRecords(req, res) {
             // Calculate average values
             const averageValues = calculateAverage(realtimeData);
 
-            const { data: Data, error: Error } = await supabase
+            const { data: idData, error: idError } = await supabase
             .from('records')
             .select('*');
 
             if (Error) {
-                return response(500, null, Error.message, res);
+                return response(500, null, idError.message, res);
             }
 
+            // const { data: tempData, tempError } = await supabase
+            // .from('control')
+            // .select('*')
+
+            // if (error) {
+            //     return response(500, null, tempError.message, res);
+            // }
+
             // Check if there are more than 5 records
-            increment = Data.length + 1;
+            increment = idData.length + 1;
             id = increment;
+
+            // mesoTemp = tempData.sedang1[0];
+            // thermoTemp = tempData.sedang4[0];
 
             const { data, error } = await supabase
             .from('records')
@@ -315,6 +341,15 @@ async function getRecords(req, res) {
             await resetRealtimeTable();
         }
 
+        // Return content of records table
+        return response(200, null, "Data retrieved", res);
+    } catch (error) {
+        return response(500, null, error.message, res);
+    }
+}
+
+async function getRecords(req, res) {
+    try {
         // Fetch content of records table
         const { data: recordsData, error: recordsError } = await supabase
             .from('records')
@@ -535,16 +570,54 @@ async function getState(req, res) {
     }
 }
 
+async function getDays(req, res) {
+    try {
+        const { data: stateData, error: stateError } = await supabase
+            .from('state')
+            .select('*')
+            .eq('id', 1);
+
+        if (stateError) {
+            return response(500, null, stateError.message, res);
+        }
+
+        // Check if stateData is empty or undefined
+        if (!stateData || stateData.length === 0) {
+            return response(404, null, "State data not found", res);
+        }
+
+        const { state, date } = stateData[0];
+
+        // Check if state is 1
+        if (state !== 1) {
+            return response(400, null, "State is not active", res);
+        }
+
+        // Calculate the number of days passed
+        const currentDate = new Date();
+        const pastDate = new Date(date);
+        const diffTime = Math.abs(currentDate - pastDate);
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+        return response(200, { days: diffDays }, "Days counted", res);
+    } catch (error) {
+        return response(500, null, error.message, res);
+    }
+}
+
+
 // Exporting the handler functions
 module.exports = { register, 
     logIn, 
     getUser, 
     getRealtime, 
     postRealtime, 
+    postRecords,
     getRecords, 
     getControl, 
     putControlTemp, 
     putControlMoist, 
     deactivateDevice, 
     activateDevice, 
-    getState };
+    getState,
+    getDays };
