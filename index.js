@@ -18,7 +18,7 @@ app.use((req, res, next) => {
         'Origin, X-Requested-With, Content-Type, Accept, Authorization'
     );
     if(req.method === 'OPTIONS') {
-        res.header('Access-Control-Allow-Method', 'GET, POST, PUT, PATCH, DELETE');
+        res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE');
         return res.json({});
     }
     next();

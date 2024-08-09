@@ -12,8 +12,7 @@ function getDate() {
     var dt = new Date();
     var offset = 7 * 60 * 60 * 1000;
     var newDate = new Date(dt.getTime() + offset);
-    
-    // Format date to ISO string without timezone offset
+
     return isoString = newDate.toISOString();
 }
 
@@ -76,21 +75,26 @@ async function resetRealtimeTable() {
     .gt('id', 0)
 }
 
+async function resetRecordsTable() {
+    // Delete all data from the realtime table
+    await supabase
+    .from('records')
+    .delete()
+    .gt('id', 0)
+}
+
 //routes function
 // Function to register a new user
 async function register(req, res) {
     const { Username, Email, Password } = req.body;
 
-    // Regular expression for validating email address
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    // Check if the provided email address is valid
     if (!emailRegex.test(Email)) {
         return response(400, null, "Invalid email address", res);
     }
 
     try {
-        // Hash the password
         const hashedPassword = await bcrypt.hash(Password, 10);
 
         await supabase.auth.signUp({
@@ -107,7 +111,6 @@ async function register(req, res) {
         if (error) {
             return response(500, null, error.message, res);
         } else {
-            // Fetch the inserted data
             const { data: registeredData, error: fetchError } = await supabase
                 .from('users')
                 .select('*')
@@ -507,6 +510,9 @@ async function deactivateDevice(req, res) {
             return response(500, null, error.message, res);
         }
 
+        resetRealtimeTable();
+        resetRecordsTable();
+
         return response(200, data, "State updated", res);
     } catch (error) {
         return response(500, null, error.message, res);
@@ -530,4 +536,15 @@ async function getState(req, res) {
 }
 
 // Exporting the handler functions
-module.exports = { register, logIn, getUser, getRealtime, postRealtime, getRecords, getControl, putControlTemp, putControlMoist, deactivateDevice, activateDevice, getState };
+module.exports = { register, 
+    logIn, 
+    getUser, 
+    getRealtime, 
+    postRealtime, 
+    getRecords, 
+    getControl, 
+    putControlTemp, 
+    putControlMoist, 
+    deactivateDevice, 
+    activateDevice, 
+    getState };

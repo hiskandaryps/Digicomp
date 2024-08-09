@@ -1,7 +1,18 @@
 //routes.js
 const express = require("express");
 const router = express.Router();
-const { register, logIn, getUser, getRealtime, postRealtime, getRecords, getControl, putControlTemp, putControlMoist, deactivateDevice, activateDevice, getState } = require("../handler/handler");
+const { register, 
+    logIn, 
+    getUser, 
+    getRealtime, 
+    postRealtime, 
+    getRecords, 
+    getControl, 
+    putControlTemp, 
+    putControlMoist, 
+    deactivateDevice, 
+    activateDevice, 
+    getState } = require("../handler/handler");
 const { authenticateToken } = require("../middleware/jsonwebtoken");
 
 
