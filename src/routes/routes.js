@@ -14,7 +14,8 @@ const { register,
     deactivateDevice, 
     activateDevice, 
     getState,
-    getDays } = require("../handler/handler");
+    getDays,
+    calculateFIS } = require("../handler/handler");
 const { authenticateToken } = require("../middleware/jsonwebtoken");
 
 
@@ -22,16 +23,18 @@ const { authenticateToken } = require("../middleware/jsonwebtoken");
 router.post("/user", register);
 router.post("/user/login", logIn);
 router.get("/user", authenticateToken, getUser); 
-router.get("/realtime", getRealtime); 
-router.post("/realtime", postRealtime);
-router.post("/records", postRecords); 
-router.get("/records", getRecords); 
+router.get("/data/realtime", getRealtime); 
+router.post("/data/realtime", postRealtime);
+router.post("/data/records", postRecords); 
+router.get("/data/records", getRecords); 
 router.get("/control", getControl); 
 router.put("/control/temperature", authenticateToken, putControlTemp); 
 router.put("/control/moisture", authenticateToken, putControlMoist); 
 router.put("/state/activate", activateDevice);
 router.put("/state/deactivate", deactivateDevice);
-router.get("/state", authenticateToken, getState);
-router.get("/time/days", authenticateToken, getDays);
+router.get("/state", getState);
+router.get("/state/days", authenticateToken, getDays);
+router.post("/fuzzy", calculateFIS);
+//router.post("/fuzzy", getFIS);
 
 module.exports = router;

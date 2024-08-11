@@ -2,6 +2,7 @@
 const bcrypt = require('bcryptjs');
 const supabase = require("../config/connection");
 const { generateAccessToken } = require("../middleware/jsonwebtoken");
+const system = require("../fuzzyController/fuzzyinferencesystem");
 
 //non routes function
 function response(status, data, message, res) {
@@ -118,33 +119,13 @@ async function register(req, res) {
             .from('users')
             .insert([
                 { Username, Email, Password: hashedPassword }
-            ]);
+            ])
+            .select();
 
         if (error) {
             return response(500, null, error.message, res);
         } else {
-            const { data: registeredData, error: fetchError } = await supabase
-                .from('users')
-                .select('*')
-                .eq('Email', Email);
-
-            if (fetchError) {
-                return response(500, null, "Internal server error", res);
-            }
-
-            if (!registeredData || registeredData.length === 0) {
-                return response(500, null, "Internal server error", res);
-            }
-
-            // If data was inserted successfully, return it in the response
-            const responseData = {
-                Username: registeredData[0].Username,
-                Email: registeredData[0].Email,
-                inserted_at: registeredData[0].inserted_at,
-                updated_at: registeredData[0].updated_at
-            };
-
-            return response(200, responseData, "Registration complete", res);
+            return response(200, data, "Registration complete", res);
         }   
     } catch (error) {
         return response(500, null, error.message, res);
@@ -183,11 +164,9 @@ async function logIn(req, res) {
         const token = generateAccessToken(data[0].Username);
 
         const responseData = {
-            Username: data[0].Username,
-            Email: data[0].Email,
-            inserted_at: data[0].inserted_at,
-            updated_at: data[0].updated_at,
-            Token: token
+            username: data[0].Username,
+            email: data[0].Email,
+            token: token
         };
         
         return response(200, responseData, "Login successful", res);
@@ -266,12 +245,13 @@ async function postRealtime(req, res) {
                 temp_ambiance,
                 humi_ambiance
             }
-            ]);
+            ])
+            .select();
         if (error) {
             return response(500, null, error.message, res);
         }
 
-        return response(200, data, "Latest data retrieved", res);
+        return response(200, data, "Data inserted", res);
     } catch (error) {
         return response(500, null, error.message, res);
     }
@@ -318,17 +298,17 @@ async function postRecords(req, res) {
                     temp_ambiance: averageValues.temp_ambiance,
                     humi_ambiance: averageValues.humi_ambiance
                 }
-            ]);
+            ])
+            .select();
 
             if (error) {
                 return response(500, null, error.message || "Insert error", res);
             }
 
             await resetRealtimeTable();
+            return response(200, data, "Data inserted", res);
         }
 
-        // Return content of records table
-        return response(200, null, "Data retrieved", res);
     } catch (error) {
         return response(500, null, error.message || "Unknown error", res);
     }
@@ -337,16 +317,16 @@ async function postRecords(req, res) {
 async function getRecords(req, res) {
     try {
         // Fetch content of records table
-        const { data: recordsData, error: recordsError } = await supabase
+        const { data, error } = await supabase
             .from('records')
             .select('*');
 
         if (recordsError) {
-            return response(500, null, recordsError.message, res);
+            return response(500, null, error.message, res);
         }
 
         // Return content of records table
-        return response(200, recordsData, "Data retrieved", res);
+        return response(200, data, "Data retrieved", res);
     } catch (error) {
         return response(500, null, error.message, res);
     }
@@ -387,25 +367,13 @@ async function putControlTemp(req, res) {
                 ...values,
                 updated_at: getDate()
             })
-            .eq('id', 1); // Assuming there's only one row in the control table
+            .eq('id', 1)
+            .select(); // Assuming there's only one row in the control table
 
         if (error) {
             return response(500, null, error.message, res);
         } else {
-            // Fetch the inserted data
-            const { data: updatedSettings, error: fetchError } = await supabase
-                .from('control')
-                .select('*')
-
-            if (fetchError) {
-                return response(500, null, "Internal server error", res);
-            }
-
-            if (!updatedSettings || updatedSettings.length === 0) {
-                return response(500, null, "Internal server error", res);
-            }
-
-            return response(200, updatedSettings, "Setting updated", res);
+            return response(200, data, "Setting updated", res);
         }  
     } catch (error) {
         return response(500, null, error.message, res);
@@ -426,25 +394,13 @@ async function putControlMoist(req, res) {
                 moist_max,
                 updated_at: getDate()
             })
-            .eq('id', 1); // Assuming there's only one row in the control table
+            .eq('id', 1)
+            .select(); // Assuming there's only one row in the control table
 
         if (error) {
             return response(500, null, error.message, res);
         } else {
-            // Fetch the inserted data
-            const { data: updatedSettings, error: fetchError } = await supabase
-                .from('control')
-                .select('*')
-
-            if (fetchError) {
-                return response(500, null, "Internal server error", res);
-            }
-
-            if (!updatedSettings || updatedSettings.length === 0) {
-                return response(500, null, "Internal server error", res);
-            }
-
-            return response(200, updatedSettings, "Setting updated", res);
+            return response(200, data, "Setting updated", res);
         }  
     } catch (error) {
         return response(500, null, error.message, res);
@@ -461,16 +417,7 @@ async function activateDevice(req, res) {
             return response(500, null, stateError.message, res);
         }
 
-        console.log("State Data:", stateData); // Debugging: Log the returned data
-
-        // Check if stateData is empty or undefined
-        if (!stateData || stateData.length === 0) {
-            return response(404, null, "State data not found", res);
-        }
-
-        const currentState = stateData[0].state;
-
-        if (currentState !== 0) {
+        if (stateData[0].state !== 0) {
             return response(400, null, "Device is already activated", res);
         }
 
@@ -482,7 +429,8 @@ async function activateDevice(req, res) {
                 state,
                 date: getDate()
             })
-            .eq('id', 1);
+            .eq('id', 1)
+            .select();
 
         if (error) {
             return response(500, null, error.message, res);
@@ -504,16 +452,7 @@ async function deactivateDevice(req, res) {
             return response(500, null, stateError.message, res);
         }
 
-        console.log("State Data:", stateData); // Debugging: Log the returned data
-
-        // Check if stateData is empty or undefined
-        if (!stateData || stateData.length === 0) {
-            return response(404, null, "State data not found", res);
-        }
-
-        const currentState = stateData[0].state;
-
-        if (currentState !== 1) {
+        if (stateData[0].state !== 1) {
             return response(400, null, "Device is already deactivated", res);
         }
 
@@ -525,7 +464,8 @@ async function deactivateDevice(req, res) {
                 state,
                 date: getDate()
             })
-            .eq('id', 1);
+            .eq('id', 1)
+            .select();
 
         if (error) {
             return response(500, null, error.message, res);
@@ -567,11 +507,6 @@ async function getDays(req, res) {
             return response(500, null, stateError.message, res);
         }
 
-        // Check if stateData is empty or undefined
-        if (!stateData || stateData.length === 0) {
-            return response(404, null, "State data not found", res);
-        }
-
         const { state, date } = stateData[0];
 
         // Check if state is 1
@@ -579,18 +514,72 @@ async function getDays(req, res) {
             return response(400, null, "State is not active", res);
         }
 
-        // Calculate the number of days passed
-        const currentDate = new Date();
         const pastDate = new Date(date);
-        const diffTime = Math.abs(currentDate - pastDate);
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        const currentDate = new Date();
+        const currentDateWithOffset = new Date(currentDate.getTime() + (7 * 60 * 60 * 1000));
 
-        return response(200, { days: diffDays }, "Days counted", res);
+        // Calculate the difference in time
+        const diffTime = Math.abs(currentDateWithOffset - pastDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        return response(200, { days: diffDays }, "Elapsed days counted", res);
     } catch (error) {
         return response(500, null, error.message, res);
     }
 }
 
+// async function getMinutes(req, res) {
+//     try {
+//         const { data: stateData, error: stateError } = await supabase
+//             .from('state')
+//             .select('*')
+//             .eq('id', 1);
+
+//         if (stateError) {
+//             return response(500, null, stateError.message, res);
+//         }
+
+//         const { state, date } = stateData[0];
+
+//         // Check if state is 1
+//         if (state !== 1) {
+//             return response(400, null, "State is not active", res);
+//         }
+
+//         const pastDate = new Date(date);
+//         const currentDate = new Date();
+//         const currentDateWithOffset = new Date(currentDate.getTime() + (7 * 60 * 60 * 1000));
+
+//         console.log("Parsed past date:", pastDate);
+//         console.log("Current date:", currentDateWithOffset);
+
+//         // Calculate the difference in time
+//         const diffTime = Math.abs(currentDateWithOffset - pastDate);
+//         const diffMinutes = Math.floor(diffTime / (1000 * 60));
+
+//         console.log("Difference in time (ms):", diffTime);
+//         console.log("Difference in minutes:", diffMinutes);
+
+//         return response(200, { minutes: diffMinutes }, "Minutes counted", res);
+//     } catch (error) {
+//         return response(500, null, error.message, res);
+//     }
+// }
+
+async function calculateFIS(req, res) {
+    const { currentTemp, targetTemp } = req.body;
+
+    try {
+        const [heaterPWM, exhaustPWM] = system.getPreciseOutput([currentTemp, targetTemp]);
+        const responseData = {
+            heater_pwm: heaterPWM,
+            exhaust_pwm: exhaustPWM
+        };
+        return response(200, responseData, "Fuzzy output calculated", res);
+    } catch (error) {
+        return response(500, null, error.message, res);
+    }
+}
 
 // Exporting the handler functions
 module.exports = { register, 
@@ -606,4 +595,5 @@ module.exports = { register,
     deactivateDevice, 
     activateDevice, 
     getState,
-    getDays };
+    getDays,
+    calculateFIS };
