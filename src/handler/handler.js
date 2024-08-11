@@ -571,6 +571,8 @@ async function calculateFIS(req, res) {
 
     try {
         const [heaterPWM, exhaustPWM] = system.getPreciseOutput([currentTemp, targetTemp]);
+        
+
         const responseData = {
             heater_pwm: heaterPWM,
             exhaust_pwm: exhaustPWM

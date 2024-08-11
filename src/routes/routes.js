@@ -28,12 +28,12 @@ router.post("/data/realtime", postRealtime);
 router.post("/data/records", postRecords); 
 router.get("/data/records", getRecords); 
 router.get("/control", getControl); 
-router.put("/control/temperature", authenticateToken, putControlTemp); 
-router.put("/control/moisture", authenticateToken, putControlMoist); 
+router.put("/control/temperature", putControlTemp); 
+router.put("/control/moisture", putControlMoist); 
 router.put("/state/activate", activateDevice);
 router.put("/state/deactivate", deactivateDevice);
 router.get("/state", getState);
-router.get("/state/days", authenticateToken, getDays);
+router.get("/state/days", getDays);
 router.post("/fuzzy", calculateFIS);
 //router.post("/fuzzy", getFIS);
 
