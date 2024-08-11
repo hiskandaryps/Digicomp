@@ -2,71 +2,8 @@
 const bcrypt = require('bcryptjs');
 const supabase = require("../config/connection");
 const { generateAccessToken } = require("../middleware/jsonwebtoken");
-const system = require("../fuzzyController/fuzzyinferencesystem");
-
-//non routes function
-function response(status, data, message, res) {
-    res.status(status).json({ status, data, message });
-}
-
-function getDate() {
-    var dt = new Date();
-    var offset = 7 * 60 * 60 * 1000;
-    var newDate = new Date(dt.getTime() + offset);
-
-    return isoString = newDate.toISOString();
-}
-
-function calculateTemp(sedang1, sedang4) {
-    let dingin1 = 0;
-    let dingin2, dingin3, dingin4, sedang2, sedang3, panas1, panas2, panas3, panas4 = 90;
-
-    sedang2 = sedang1 + (sedang4 - sedang1) / 3;
-    sedang3 = sedang1 + 2 * ((sedang4 - sedang1) / 3);
-    dingin4 = sedang1 + 5;
-    dingin2 = dingin1 + (dingin4 - dingin1) / 3;
-    dingin3 = dingin1 + 2 * ((dingin4 - dingin1) / 3);
-    panas1 = sedang4 - 5;
-    panas2 = panas1 + (panas4 - panas1) / 3;
-    panas3 = panas1 + 2 * ((panas4 - panas1) / 3);
-
-    return {
-        dingin1,
-        dingin2,
-        dingin3,
-        dingin4,
-        sedang1,
-        sedang2,
-        sedang3,
-        sedang4,
-        panas1,
-        panas2,
-        panas3,
-        panas4
-    };
-}
-
-// Function to calculate average values
-function calculateAverage(data) {
-    const total = data.length;
-    const sum = data.reduce((acc, curr) => {
-        return {
-            temp: acc.temp + curr.temp,
-            humi: acc.humi + curr.humi,
-            ph: acc.ph + curr.ph,
-            temp_ambiance: acc.temp_ambiance + curr.temp_ambiance,
-            humi_ambiance: acc.humi_ambiance + curr.humi_ambiance
-        };
-    }, { temp: 0, humi: 0, ph: 0, temp_ambiance: 0, humi_ambiance: 0 });
-
-    return {
-        temp: sum.temp / total,
-        humi: sum.humi / total,
-        ph: sum.ph / total,
-        temp_ambiance: sum.temp_ambiance / total,
-        humi_ambiance: sum.humi_ambiance / total
-    };
-}
+const system = require("../functions/fuzzyinferencesystem");
+const { response, getDate, calculateTemp, calculateAverage, distributeValues } = require("../functions/function");
 
 // function determinePhase(mesotemp, thermotemp, temp, waktu) {
 //     if (temp < thermotemp & waktu <= 4){
@@ -356,16 +293,13 @@ async function putControlTemp(req, res) {
             thermophilic_temp
         } = req.body;
 
-        const values = calculateTemp(mesophilic_temp, thermophilic_temp)
-        
-        sedang1 = mesophilic_temp;
-        sedang4 = thermophilic_temp;
+        const values = distributeValues(mesophilic_temp, thermophilic_temp)
 
         const { data, error } = await supabase
             .from('control')
             .update({
                 ...values,
-                updated_at: getDate()
+                inserted_at: getDate()
             })
             .eq('id', 1)
             .select(); // Assuming there's only one row in the control table
@@ -392,7 +326,7 @@ async function putControlMoist(req, res) {
             .update({
                 moist_min,
                 moist_max,
-                updated_at: getDate()
+                inserted_at: getDate()
             })
             .eq('id', 1)
             .select(); // Assuming there's only one row in the control table
