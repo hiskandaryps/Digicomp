@@ -32,7 +32,7 @@ router.put("/control/temperature", authenticateToken, putControlTemp);
 router.put("/control/moisture", authenticateToken, putControlMoist); 
 router.put("/state/activate", activateDevice);
 router.put("/state/deactivate", deactivateDevice);
-router.get("/state", authenticateToken, getState);
+router.get("/state", getState);
 router.get("/state/days", authenticateToken, getDays);
 router.post("/fuzzy", calculateFIS);
 //router.post("/fuzzy", getFIS);
