@@ -2,20 +2,16 @@
 const bcrypt = require('bcryptjs');
 const supabase = require("../config/connection");
 const { generateAccessToken } = require("../middleware/jsonwebtoken");
-const system = require("../functions/fuzzyinferencesystem");
-const { response, getDate, calculateTemp, calculateAverage, distributeValues } = require("../functions/function");
+const getPWMOutput = require("../functions/fuzzyinferencesystem");
+const { response, getDate, calculateAverage, distributeValues } = require("../functions/function");
 
-// function determinePhase(mesotemp, thermotemp, temp, waktu) {
-//     if (temp < thermotemp & waktu <= 4){
-//         return "Mesofilik 1";
-//     } else if (temp > thermotemp & 3 < waktu <= 14){
-//         return "Thermofilik";
-//     } else if (temp < thermotemp & 12 < waktu <= 20){
-//         return "Mesofilik 2";
-//     } else if (temp < mesotemp & 12 < waktu <= 20 or temp < thermotemp & 17 < waktu <= 40 ){
-//         return "Maturasi";
-//     }
-// }
+async function resetRealtimeExceptLatest(id) {
+    // Delete all data from the realtime table
+    await supabase
+    .from('realtime')
+    .delete()
+    .lt('id', id)
+}
 
 async function resetRealtimeTable() {
     // Delete all data from the realtime table
@@ -153,10 +149,11 @@ async function postRealtime(req, res) {
     
     const { 
         temp,
-        humi,
+        moist,
         ph,
         temp_ambiance,
-        humi_ambiance } = req.body;
+        humid_ambiance,
+        phase } = req.body;
 
     try {
         const { data: realtimeData, error: realtimeError } = await supabase
@@ -177,10 +174,11 @@ async function postRealtime(req, res) {
             {
                 id,
                 temp,
-                humi,
+                moist,
                 ph,
                 temp_ambiance,
-                humi_ambiance
+                humid_ambiance,
+                phase
             }
             ])
             .select();
@@ -205,7 +203,7 @@ async function postRecords(req, res) {
             .select('*');
 
         if (realtimeError) {
-            return response(500, null, realtimeError.message || "Realtime error", res);
+            return response(500, null, realtimeError.message, res);
         }
 
         // Check if there are more than 5 records
@@ -218,7 +216,7 @@ async function postRecords(req, res) {
             .select('*');
 
             if (idError) {
-                return response(500, null, idError.message || "ID error", res);
+                return response(500, null, idError.message, res);
             }
 
             increment = idData.length + 1;
@@ -230,10 +228,10 @@ async function postRecords(req, res) {
                 {
                     id,
                     temp: averageValues.temp,
-                    humi: averageValues.humi,
+                    moist: averageValues.moist,
                     ph: averageValues.ph,
                     temp_ambiance: averageValues.temp_ambiance,
-                    humi_ambiance: averageValues.humi_ambiance
+                    humid_ambiance: averageValues.humid_ambiance
                 }
             ])
             .select();
@@ -242,7 +240,21 @@ async function postRecords(req, res) {
                 return response(500, null, error.message || "Insert error", res);
             }
 
-            await resetRealtimeTable();
+            await resetRealtimeExceptLatest(realtimeData.length);
+            const { data: resetData, error: resetError } = await supabase
+            .from('realtime')
+            .update([
+            {
+                id: 1,
+            }
+            ])
+            .eq('id', realtimeData.length)
+            .select();
+
+            if (resetError) {
+                return response(500, null, error.message, res);
+            }
+
             return response(200, data, "Data inserted", res);
         }
 
@@ -258,7 +270,7 @@ async function getRecords(req, res) {
             .from('records')
             .select('*');
 
-        if (recordsError) {
+        if (error) {
             return response(500, null, error.message, res);
         }
 
@@ -299,7 +311,7 @@ async function putControlTemp(req, res) {
             .from('control')
             .update({
                 ...values,
-                inserted_at: getDate()
+                updated_at: getDate()
             })
             .eq('id', 1)
             .select(); // Assuming there's only one row in the control table
@@ -326,7 +338,7 @@ async function putControlMoist(req, res) {
             .update({
                 moist_min,
                 moist_max,
-                inserted_at: getDate()
+                updated_at: getDate()
             })
             .eq('id', 1)
             .select(); // Assuming there's only one row in the control table
@@ -501,17 +513,40 @@ async function getDays(req, res) {
 // }
 
 async function calculateFIS(req, res) {
-    const { currentTemp, targetTemp } = req.body;
+    const { currentTemperature, targetTemperature } = req.body;
 
     try {
-        const [heaterPWM, exhaustPWM] = system.getPreciseOutput([currentTemp, targetTemp]);
-        
+        const { data, error } = await supabase
+            .from('control')
+            .select('*')
 
-        const responseData = {
-            heater_pwm: heaterPWM,
-            exhaust_pwm: exhaustPWM
-        };
-        return response(200, responseData, "Fuzzy output calculated", res);
+        if (error) {
+            return response(500, null, error.message, res);
+        }
+        
+        const vc1 = data[0].vc1, vc2 = data[0].vc2, vc3 = data[0].vc3;
+        const c1 = data[0].c1, c2 = data[0].c2, c3 = data[0].c3;
+        const lw1 = data[0].lw1, lw2 = data[0].lw2, lw3 = data[0].lw3;
+        const w1 = data[0].w1, w2 = data[0].w2, w3 = data[0].w3;
+        const h1 = data[0].h1, h2 = data[0].h2, h3 = data[0].h3;
+        const vh1 = data[0].vh1, vh2 = data[0].vh2, vh3 = data[0].vh3;
+
+        const [heaterPWM, exhaustPWM] = getPWMOutput(vc1, vc2, vc3, c1, c2, c3, lw1, lw2, lw3, w1, w2, w3, h1, h2, h3, vh1, vh2, vh3, currentTemperature, targetTemperature);
+
+        const { data: fuzzyData, error: fuzzyError } = await supabase
+            .from('fuzzy')
+            .update({
+                heater_pwm: heaterPWM,
+                exhaust_pwm: exhaustPWM,
+                updated_at: getDate()
+            })
+            .eq('id', 1)
+            .select();
+
+        if (fuzzyError) {
+            return response(500, null, fuzzyError.message, res);
+        }
+        return response(200, fuzzyData, "Fuzzy output calculated", res);
     } catch (error) {
         return response(500, null, error.message, res);
     }
