@@ -552,6 +552,22 @@ async function calculateFIS(req, res) {
     }
 }
 
+async function getFuzzy(req, res) {
+    try {
+        const { data, error } = await supabase
+            .from('fuzzy')
+            .select('*')
+
+        if (error) {
+            return response(500, null, error.message, res);
+        }
+
+        return response(200, data, "PWM value retrieved", res);
+    } catch (error) {
+        return response(500, null, error.message, res);
+    }
+}
+
 // Exporting the handler functions
 module.exports = { register, 
     logIn, 
@@ -567,4 +583,5 @@ module.exports = { register,
     activateDevice, 
     getState,
     getDays,
-    calculateFIS };
+    calculateFIS,
+    getFuzzy };
