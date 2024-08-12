@@ -9,51 +9,22 @@ function getDate() {
     return newDate.toISOString();
 }
 
-function calculateTemp(sedang1, sedang4) {
-    const dingin1 = 0;
-    const panas4 = 90;
-
-    const sedang2 = sedang1 + (sedang4 - sedang1) / 3;
-    const sedang3 = sedang1 + 2 * ((sedang4 - sedang1) / 3);
-    const dingin4 = sedang1 + 5;
-    const dingin2 = dingin1 + (dingin4 - dingin1) / 3;
-    const dingin3 = dingin1 + 2 * ((dingin4 - dingin1) / 3);
-    const panas1 = sedang4 - 5;
-    const panas2 = panas1 + (panas4 - panas1) / 3;
-    const panas3 = panas1 + 2 * ((panas4 - panas1) / 3);
-
-    return {
-        dingin1,
-        dingin2,
-        dingin3,
-        dingin4,
-        sedang1,
-        sedang2,
-        sedang3,
-        sedang4,
-        panas1,
-        panas2,
-        panas3,
-        panas4
-    };
-}
-
 function calculateAverage(data) {
     const total = data.length;
     const sum = data.reduce((acc, curr) => ({
         temp: acc.temp + curr.temp,
-        humi: acc.humi + curr.humi,
+        moist: acc.moist + curr.moist,
         ph: acc.ph + curr.ph,
         temp_ambiance: acc.temp_ambiance + curr.temp_ambiance,
-        humi_ambiance: acc.humi_ambiance + curr.humi_ambiance
-    }), { temp: 0, humi: 0, ph: 0, temp_ambiance: 0, humi_ambiance: 0 });
+        humid_ambiance: acc.humid_ambiance + curr.humid_ambiance
+    }), { temp: 0, moist: 0, ph: 0, temp_ambiance: 0, humid_ambiance: 0 });
 
     return {
         temp: sum.temp / total,
-        humi: sum.humi / total,
+        moist: sum.moist / total,
         ph: sum.ph / total,
         temp_ambiance: sum.temp_ambiance / total,
-        humi_ambiance: sum.humi_ambiance / total
+        humid_ambiance: sum.humid_ambiance / total
     };
 }
 
@@ -99,4 +70,4 @@ function distributeValues(min, max) {
     };
 }
 
-module.exports = { response, getDate, calculateTemp, calculateAverage, distributeValues };
+module.exports = { response, getDate, calculateAverage, distributeValues };
