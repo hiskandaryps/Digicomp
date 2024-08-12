@@ -15,7 +15,8 @@ const { register,
     activateDevice, 
     getState,
     getDays,
-    calculateFIS } = require("../handler/handler");
+    calculateFIS,
+    getFuzzy } = require("../handler/handler");
 const { authenticateToken } = require("../middleware/jsonwebtoken");
 
 
@@ -35,6 +36,6 @@ router.put("/state/deactivate", deactivateDevice);
 router.get("/state", getState);
 router.get("/state/days", getDays);
 router.post("/fuzzy", calculateFIS);
-//router.post("/fuzzy", getFIS);
+router.get("/fuzzy", getFuzzy);
 
 module.exports = router;
