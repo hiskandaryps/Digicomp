@@ -255,8 +255,9 @@ async function postRecords(req, res) {
                 return response(500, null, error.message, res);
             }
 
-            return response(200, data, "Data inserted", res);
+            return response(200, null, "Not enough data", res);
         }
+        return response(200, data, "Data inserted", res);
 
     } catch (error) {
         return response(500, null, error.message || "Unknown error", res);
